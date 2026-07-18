@@ -11,7 +11,7 @@ export default function ErrorBanner({ errors }) {
         background: 'rgba(239, 83, 80, 0.08)',
         border: '1px solid rgba(239, 83, 80, 0.2)',
         borderLeft: '3px solid #ef5350',
-        borderRadius: 4,
+        borderRadius: 12,
         padding: '0.65rem 0.9rem',
         marginTop: '0.75rem',
       }}

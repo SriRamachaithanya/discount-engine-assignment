@@ -22,11 +22,12 @@ export default function CsvUploader({ label, description, onLoad, hasData, fileN
 
   return (
     <div
+      className="card-hover"
       style={{
         border: `2px dashed ${hasData ? 'rgba(0, 230, 118, 0.4)' : 'rgba(255, 255, 255, 0.15)'}`,
-        borderRadius: '8px',
+        borderRadius: '12px',
         padding: '1.1rem 1.3rem',
-        background: hasData ? 'rgba(0, 230, 118, 0.05)' : 'rgba(0, 0, 0, 0.15)',
+        background: hasData ? 'rgba(0, 230, 118, 0.05)' : 'rgba(20, 18, 15, 0.3)',
         cursor: 'pointer',
         transition: 'all 0.2s',
       }}

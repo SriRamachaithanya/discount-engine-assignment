@@ -17,16 +17,16 @@ import { parseCartPdf } from './engine/pdfParser.js';
 // ── Column definitions ───────────────────────────────────────────
 
 const RULES_COLUMNS = [
-  { key: 'ruleId',    label: 'Rule ID' },
-  { key: 'scope',     label: 'Scope',      render: (v) => v.charAt(0).toUpperCase() + v.slice(1) },
+  { key: 'ruleId', label: 'Rule ID' },
+  { key: 'scope', label: 'Scope', render: (v) => v.charAt(0).toUpperCase() + v.slice(1) },
   { key: 'appliesTo', label: 'Applies To', render: (v, row) => row.scope === 'cart' ? '—' : v },
-  { key: 'type',      label: 'Type',       render: (v) => v.charAt(0).toUpperCase() + v.slice(1) },
+  { key: 'type', label: 'Type', render: (v) => v.charAt(0).toUpperCase() + v.slice(1) },
   {
     key: 'value',
     label: 'Value',
-    render: (v, row) => row.type === 'percentage' ? `${v}% off` : `Rs.${v} off`,
+    render: (v, row) => row.type === 'percentage' ? `${v}% off` : `Rs.${v.toLocaleString('en-IN')} off`,
   },
-  { key: 'stackable', label: 'Stackable',  render: (v) => (v ? 'Yes' : 'No') },
+  { key: 'stackable', label: 'Stackable', render: (v) => (v ? 'Yes' : 'No') },
   {
     key: 'minCartValue',
     label: 'Min Cart Value',
@@ -35,25 +35,27 @@ const RULES_COLUMNS = [
 ];
 
 const CART_COLUMNS = [
-  { key: 'itemId',    label: 'Item' },
-  { key: 'product',   label: 'Product' },
-  { key: 'brand',     label: 'Brand' },
-  { key: 'platform',  label: 'Platform' },
+  { key: 'itemId', label: 'Item' },
+  { key: 'product', label: 'Product' },
+  { key: 'brand', label: 'Brand' },
+  { key: 'platform', label: 'Platform' },
   { key: 'basePrice', label: 'Base Price', render: (v) => `Rs.${v.toLocaleString('en-IN')}` },
 ];
 
 const RESULTS_COLUMNS = [
-  { key: 'itemId',    label: 'Item' },
-  { key: 'product',   label: 'Product' },
-  { key: 'basePrice', label: 'Base Price',  render: (v) => `Rs.${v.toLocaleString('en-IN')}` },
-  { key: 'reasoning', label: 'Rule(s) Applied',
+  { key: 'itemId', label: 'Item' },
+  { key: 'product', label: 'Product' },
+  { key: 'basePrice', label: 'Base Price', render: (v) => `Rs.${v.toLocaleString('en-IN')}` },
+  {
+    key: 'reasoning', label: 'Rule(s) Applied',
     render: (v) => (
       <span style={{ color: v === 'No rules match' ? '#8e95a5' : '#fff', fontStyle: v === 'No rules match' ? 'italic' : 'normal', fontSize: 11.5 }}>
         {v}
       </span>
     ),
   },
-  { key: 'finalPrice',label: 'Final Price',
+  {
+    key: 'finalPrice', label: 'Final Price',
     render: (v, row) => (
       <span style={{ fontWeight: 700, color: row.totalDiscount > 0 ? '#00e676' : '#fff' }}>
         Rs.{v.toLocaleString('en-IN')}
@@ -83,7 +85,7 @@ const RESULTS_COLUMNS = [
             fontSize: 9,
             fontWeight: 800,
             padding: '2px 8px',
-            borderRadius: 4,
+            borderRadius: 6,
             background: bg,
             color,
             textTransform: 'uppercase',
@@ -106,10 +108,10 @@ const S = {
     fontFamily: 'var(--font-body)',
   },
   header: {
-    background: 'rgba(10, 11, 16, 0.8)',
+    background: 'rgba(20, 18, 15, 0.85)',
     backdropFilter: 'blur(10px)',
     borderBottom: '1px solid var(--border-glass)',
-    padding: '1rem 2.5rem',
+    padding: '1.25rem 2.5rem',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -141,15 +143,15 @@ const S = {
   main: {
     maxWidth: '1100px',
     margin: '0 auto',
-    padding: '2rem 1.5rem',
+    padding: '2.5rem 1.5rem',
   },
   section: {
     background: 'var(--bg-card)',
     backdropFilter: 'blur(16px)',
     border: '1px solid var(--border-glass)',
     borderRadius: '12px',
-    padding: '1.4rem',
-    marginBottom: '1.5rem',
+    padding: '1.75rem',
+    marginBottom: '2rem',
     boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.2)',
     transition: 'all 0.3s ease',
   },
@@ -158,7 +160,7 @@ const S = {
     fontWeight: '700',
     fontSize: '15px',
     color: '#fff',
-    marginBottom: '1rem',
+    marginBottom: '1.25rem',
     paddingBottom: '4px',
     borderBottom: '2px solid var(--color-primary)',
     display: 'inline-block',
@@ -167,29 +169,28 @@ const S = {
   grid2: {
     display: 'grid',
     gridTemplateColumns: '1fr 1fr',
-    gap: '1.25rem',
+    gap: '1.75rem',
     alignItems: 'start',
   },
   btn: {
     background: 'linear-gradient(135deg, var(--color-primary) 0%, #ff7a00 100%)',
     color: '#fff',
     border: 'none',
-    borderRadius: '8px',
-    padding: '0.8rem 2.5rem',
+    borderRadius: '12px',
+    padding: '0.85rem 2.75rem',
     fontSize: '12px',
     fontWeight: '700',
     cursor: 'pointer',
     letterSpacing: '0.05em',
     textTransform: 'uppercase',
     boxShadow: '0 4px 15px var(--color-primary-glow)',
-    transition: 'transform 0.1s, box-shadow 0.2s',
   },
   btnDisabled: {
     background: 'rgba(255, 255, 255, 0.04)',
     color: 'rgba(255, 255, 255, 0.15)',
     border: '1px solid rgba(255, 255, 255, 0.04)',
-    borderRadius: '8px',
-    padding: '0.8rem 2.5rem',
+    borderRadius: '12px',
+    padding: '0.85rem 2.75rem',
     fontSize: '12px',
     fontWeight: '700',
     cursor: 'not-allowed',
@@ -197,12 +198,12 @@ const S = {
     textTransform: 'uppercase',
   },
   summaryContainer: {
-    marginTop: '1.5rem',
-    paddingTop: '1rem',
+    marginTop: '1.75rem',
+    paddingTop: '1.25rem',
     borderTop: '1px solid var(--border-glass)',
     display: 'flex',
     flexDirection: 'column',
-    gap: '0.8rem',
+    gap: '0.9rem',
   },
   summaryRow: {
     display: 'flex',
@@ -237,11 +238,15 @@ const S = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: '0.75rem',
-    paddingTop: '1.25rem',
-    borderTop: '2px solid rgba(255,255,255,0.1)',
+    marginTop: '1rem',
+    padding: '1.25rem 1.5rem',
+    background: 'linear-gradient(135deg, rgba(255, 85, 0, 0.08) 0%, rgba(20, 18, 15, 0.8) 100%)',
+    border: '1px solid rgba(255, 85, 0, 0.2)',
+    borderRadius: '12px',
+    boxShadow: '0 4px 20px rgba(255, 85, 0, 0.1)',
   },
   finalTotalLabel: {
+    fontFamily: 'var(--font-heading)',
     fontWeight: '800',
     fontSize: '15px',
     color: '#fff',
@@ -249,29 +254,30 @@ const S = {
     letterSpacing: '0.05em',
   },
   finalTotalValue: {
+    fontFamily: 'var(--font-heading)',
     fontWeight: '800',
-    fontSize: '22px',
+    fontSize: '32px',
     color: 'var(--color-primary)',
     textShadow: '0 0 20px var(--color-primary-glow)',
   },
   tabHeader: {
     display: 'flex',
     gap: '4px',
-    marginBottom: '1rem',
-    background: 'rgba(0,0,0,0.25)',
+    marginBottom: '1.25rem',
+    background: 'rgba(20, 18, 15, 0.5)',
     padding: '4px',
-    borderRadius: '8px',
+    borderRadius: '12px',
     border: '1px solid var(--border-glass)',
   },
   tabBtn: (active) => ({
     flex: 1,
-    padding: '6px 12px',
+    padding: '8px 12px',
     fontSize: '10px',
     fontWeight: '700',
     color: active ? '#fff' : 'var(--text-sub)',
     background: active ? 'rgba(255,255,255,0.06)' : 'transparent',
     border: 'none',
-    borderRadius: '6px',
+    borderRadius: '10px',
     cursor: 'pointer',
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
@@ -279,11 +285,11 @@ const S = {
   }),
   pdfDropzone: {
     border: '2px dashed rgba(255, 255, 255, 0.15)',
-    borderRadius: '8px',
-    padding: '1.5rem 1.2rem',
+    borderRadius: '12px',
+    padding: '1.75rem 1.25rem',
     textAlign: 'center',
     cursor: 'pointer',
-    background: 'rgba(0, 0, 0, 0.15)',
+    background: 'rgba(20, 18, 15, 0.3)',
     transition: 'all 0.2s',
   },
 };
@@ -291,16 +297,16 @@ const S = {
 // ── Component ────────────────────────────────────────────────────
 
 export default function App() {
-  const [rules, setRules]           = useState([]);
-  const [rulesErrors, setRulesErr]  = useState([]);
+  const [rules, setRules] = useState([]);
+  const [rulesErrors, setRulesErr] = useState([]);
   const [rulesFileName, setRulesFileName] = useState('');
 
-  const [cartItems, setCartItems]   = useState([]);
+  const [cartItems, setCartItems] = useState([]);
   const [cartErrors, setCartErrors] = useState([]);
-  const [cartFileName, setCartFileName]   = useState('');
+  const [cartFileName, setCartFileName] = useState('');
   const [cartInputType, setCartInputType] = useState('csv'); // 'csv' | 'pdf'
 
-  const [results, setResults]       = useState(null);
+  const [results, setResults] = useState(null);
   const [isPdfParsing, setIsPdfParsing] = useState(false);
 
   // ── Handlers ──
@@ -382,11 +388,11 @@ export default function App() {
 
       <div style={S.main}>
         {/* Upload row */}
-        <div style={S.grid2}>
+        <div className="responsive-grid">
           {/* Rules Section */}
-          <div style={S.section}>
+          <div style={S.section} className="card-hover">
             <div style={S.sectionTitle}>Discount Rules</div>
-            
+
             {/* Direct CSV Upload */}
             <div style={{ marginBottom: '1.25rem' }}>
               <CsvUploader
@@ -402,7 +408,7 @@ export default function App() {
             <NlRuleInput onAddRule={handleAddNlRule} />
 
             <ErrorBanner errors={rulesErrors} />
-            
+
             {rules.length > 0 && (
               <div style={{ marginTop: '1.25rem' }}>
                 <div style={{ fontSize: 11, color: 'var(--text-sub)', marginBottom: 6, fontWeight: '500' }}>
@@ -414,9 +420,9 @@ export default function App() {
           </div>
 
           {/* Cart Items Section */}
-          <div style={S.section}>
+          <div style={S.section} className="card-hover">
             <div style={S.sectionTitle}>Cart Items</div>
-            
+
             {/* Input Selection Tab */}
             <div style={S.tabHeader}>
               <button
@@ -460,7 +466,7 @@ export default function App() {
                 style={{
                   ...S.pdfDropzone,
                   borderColor: cartItems.length > 0 ? 'rgba(0, 230, 118, 0.4)' : 'rgba(255, 255, 255, 0.15)',
-                  background: cartItems.length > 0 ? 'rgba(0, 230, 118, 0.05)' : 'rgba(0, 0, 0, 0.15)',
+                  background: cartItems.length > 0 ? 'rgba(0, 230, 118, 0.05)' : 'rgba(20, 18, 15, 0.3)',
                 }}
                 onClick={() => document.getElementById('pdf-file-input').click()}
               >
@@ -484,7 +490,7 @@ export default function App() {
             )}
 
             <ErrorBanner errors={cartErrors} />
-            
+
             {cartItems.length > 0 && (
               <div style={{ marginTop: '1.25rem' }}>
                 <div style={{ fontSize: 11, color: 'var(--text-sub)', marginBottom: 6, fontWeight: '500' }}>
@@ -502,22 +508,35 @@ export default function App() {
             style={canCalculate ? S.btn : S.btnDisabled}
             onClick={handleCalculate}
             disabled={!canCalculate}
+            className={canCalculate ? 'btn-hover' : ''}
           >
             Calculate Discounts
           </button>
           {!canCalculate && (
-            <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 8 }}>
-              Please load both discount rules and cart items to calculate.
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '0.75rem 1.5rem',
+              borderRadius: '12px',
+              background: 'rgba(255, 85, 0, 0.05)',
+              border: '1px solid rgba(255, 85, 0, 0.15)',
+              color: 'var(--text-sub)',
+              fontSize: '12px',
+              marginTop: '1rem',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+            }}>
+              💡 Please load both discount rules and cart items to calculate.
             </div>
           )}
         </div>
 
         {/* Results */}
         {results && (
-          <div style={{ ...S.section, borderLeft: '3px solid var(--color-primary)' }}>
+          <div style={{ ...S.section, borderLeft: '3px solid var(--color-primary)' }} className="card-hover">
             <div style={S.sectionTitle}>Calculated Cart Summary</div>
             <DataTable columns={RESULTS_COLUMNS} rows={results.itemResults} />
-            
+
             <div style={S.summaryContainer}>
               <div style={S.summaryRow}>
                 <span>Cart Subtotal (after item-level offers)</span>

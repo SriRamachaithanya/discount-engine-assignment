@@ -15,8 +15,8 @@ export default function DataTable({ columns, rows, emptyMessage = 'No data loade
           color: 'rgba(255, 255, 255, 0.4)',
           fontSize: 13,
           border: '1px solid rgba(255, 255, 255, 0.08)',
-          borderRadius: 8,
-          background: 'rgba(0, 0, 0, 0.1)',
+          borderRadius: 12,
+          background: 'rgba(20, 18, 15, 0.3)',
         }}
       >
         {emptyMessage}
@@ -25,7 +25,7 @@ export default function DataTable({ columns, rows, emptyMessage = 'No data loade
   }
 
   return (
-    <div style={{ overflowX: 'auto', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: 8, background: 'rgba(0,0,0,0.1)' }}>
+    <div style={{ overflowX: 'auto', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: 12, background: 'rgba(20, 18, 15, 0.3)' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
         <thead>
           <tr style={{ background: 'rgba(0, 0, 0, 0.3)', borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
