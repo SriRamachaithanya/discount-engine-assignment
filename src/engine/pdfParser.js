@@ -63,16 +63,22 @@ export async function parseCartPdf(file) {
   dataLines.forEach((line, index) => {
     const rowNum = index + 1;
 
-    // Base price is always a number with optional commas, currency symbols, at the end of the line
-    const priceMatch = line.match(/(?:Rs\.?\s*)?([\d,]+)(?:\.00)?\s*$/i);
+    // Base price is always a number with optional commas, currency symbols, at the end of the line (support optional leading negative sign)
+    const priceMatch = line.match(/(?:Rs\.?\s*)?(-?[\d,]+)(?:\.00)?\s*$/i);
     if (!priceMatch) {
       errors.push(`Row ${rowNum}: Could not extract base price from line: "${line}"`);
       return;
     }
 
-    const priceVal = parseFloat(priceMatch[1].replace(/,/g, ''));
+    const priceStr = priceMatch[1];
+    if (priceStr.startsWith('-')) {
+      errors.push(`Row ${rowNum}: base_price cannot be negative, got "${priceStr}"`);
+      return;
+    }
+
+    const priceVal = parseFloat(priceStr.replace(/,/g, ''));
     if (isNaN(priceVal) || priceVal <= 0) {
-      errors.push(`Row ${rowNum}: Base price must be a positive number, got "${priceMatch[1]}"`);
+      errors.push(`Row ${rowNum}: Base price must be a positive number, got "${priceStr}"`);
       return;
     }
 

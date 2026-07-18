@@ -23,10 +23,12 @@ export function parseLocalHeuristic(text) {
 
   // Percentage pattern: "20% off", "10 percent off", etc.
   const pctMatch = t.match(/(\d+(?:\.\d+)?)\s*%/i) || t.match(/(\d+(?:\.\d+)?)\s*percent/i);
-  // Flat pattern: "Rs.150 off", "Rs 150", "150 rupees", "100 flat"
+  // Flat pattern: "Rs.150 off", "Rs 150", "150 rupees", "100 flat", "flat 100", "Rs 100 off"
   const flatMatch = t.match(/Rs\.?\s*(\d+(?:,\d+)*)/i) || 
+                    t.match(/flat\s+(\d+(?:,\d+)*)/i) ||
                     t.match(/(\d+(?:,\d+)*)\s*flat/i) || 
-                    t.match(/(\d+(?:,\d+)*)\s*rupee/i);
+                    t.match(/(\d+(?:,\d+)*)\s*rupee/i) ||
+                    t.match(/rs\.?\s*(\d+(?:,\d+)*)\s*off/i);
 
   if (pctMatch) {
     type = 'percentage';

@@ -113,9 +113,9 @@ export default function NlRuleInput({ onAddRule }) {
     },
     input: {
       flex: 1,
-      background: 'rgba(0, 0, 0, 0.2)',
+      background: 'rgba(20, 18, 15, 0.3)',
       border: '1px solid rgba(255, 255, 255, 0.1)',
-      borderRadius: '8px',
+      borderRadius: '12px',
       padding: '0.6rem 0.8rem',
       fontSize: '12px',
       color: '#fff',
@@ -123,9 +123,9 @@ export default function NlRuleInput({ onAddRule }) {
       transition: 'border-color 0.2s',
     },
     apiKeyInput: {
-      background: 'rgba(0, 0, 0, 0.3)',
+      background: 'rgba(20, 18, 15, 0.5)',
       border: '1px solid rgba(255, 255, 255, 0.15)',
-      borderRadius: '8px',
+      borderRadius: '12px',
       padding: '0.4rem 0.6rem',
       fontSize: '11px',
       color: '#fff',
@@ -136,7 +136,7 @@ export default function NlRuleInput({ onAddRule }) {
       background: 'linear-gradient(135deg, #FF5800 0%, #FF7A00 100%)',
       color: '#fff',
       border: 'none',
-      borderRadius: '8px',
+      borderRadius: '12px',
       padding: '0.5rem 1.2rem',
       fontSize: '12px',
       fontWeight: '600',
@@ -147,7 +147,7 @@ export default function NlRuleInput({ onAddRule }) {
       background: 'rgba(255, 255, 255, 0.1)',
       color: '#fff',
       border: 'none',
-      borderRadius: '8px',
+      borderRadius: '12px',
       padding: '0.5rem 1rem',
       fontSize: '12px',
       fontWeight: '600',
@@ -166,7 +166,7 @@ export default function NlRuleInput({ onAddRule }) {
     errorBox: {
       background: 'rgba(239, 83, 80, 0.1)',
       border: '1px solid rgba(239, 83, 80, 0.3)',
-      borderRadius: '8px',
+      borderRadius: '12px',
       padding: '0.75rem',
       marginTop: '0.75rem',
       fontSize: '12px',
@@ -180,7 +180,7 @@ export default function NlRuleInput({ onAddRule }) {
     confirmBox: {
       background: 'rgba(255, 255, 255, 0.03)',
       border: '1px dashed rgba(255, 255, 255, 0.15)',
-      borderRadius: '8px',
+      borderRadius: '12px',
       padding: '0.85rem',
       marginTop: '0.75rem',
     },
@@ -203,7 +203,7 @@ export default function NlRuleInput({ onAddRule }) {
     tag: (bg, color) => ({
       display: 'inline-block',
       padding: '2px 8px',
-      borderRadius: '4px',
+      borderRadius: '6px',
       fontSize: '10px',
       fontWeight: '700',
       background: bg || 'rgba(255,255,255,0.1)',
@@ -214,7 +214,7 @@ export default function NlRuleInput({ onAddRule }) {
   };
 
   return (
-    <div style={styles.card}>
+    <div style={styles.card} className="card-hover">
       <div style={styles.titleRow}>
         <h4 style={styles.title}>Natural Language Rules</h4>
         <span
@@ -226,7 +226,7 @@ export default function NlRuleInput({ onAddRule }) {
       </div>
 
       {showApiKeyInput && (
-        <div style={{ marginBottom: '0.75rem', padding: '0.5rem', background: 'rgba(0,0,0,0.15)', borderRadius: '6px' }}>
+        <div style={{ marginBottom: '0.75rem', padding: '0.5rem', background: 'rgba(20, 18, 15, 0.25)', borderRadius: '12px' }}>
           <label style={{ display: 'block', fontSize: '10px', color: 'rgba(255, 255, 255, 0.5)', marginBottom: '4px' }}>
             Gemini API Key (stored locally, optional)
           </label>
@@ -259,6 +259,7 @@ export default function NlRuleInput({ onAddRule }) {
               onClick={handleParse}
               disabled={isParsing || !inputText.trim()}
               style={{ ...styles.btn, opacity: isParsing || !inputText.trim() ? 0.6 : 1 }}
+              className={isParsing || !inputText.trim() ? '' : 'btn-hover'}
             >
               {isParsing ? 'Parsing...' : 'Parse'}
             </button>
@@ -290,7 +291,7 @@ export default function NlRuleInput({ onAddRule }) {
             <div>
               <div style={styles.confirmLabel}>Discount Value</div>
               <div style={{ ...styles.confirmValue, color: '#4caf50' }}>
-                {parsedRule.type === 'percentage' ? `${parsedRule.value}% off` : `Rs.${parsedRule.value} off`}
+                {parsedRule.type === 'percentage' ? `${parsedRule.value}% off` : `Rs.${parsedRule.value.toLocaleString('en-IN')} off`}
               </div>
             </div>
             <div>
@@ -309,10 +310,10 @@ export default function NlRuleInput({ onAddRule }) {
             )}
           </div>
           <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-            <button onClick={handleDiscard} style={styles.btnSec}>
+            <button onClick={handleDiscard} style={styles.btnSec} className="btn-sec-hover">
               Discard
             </button>
-            <button onClick={handleConfirm} style={styles.btn}>
+            <button onClick={handleConfirm} style={styles.btn} className="btn-hover">
               Confirm & Add Rule
             </button>
           </div>
@@ -324,7 +325,7 @@ export default function NlRuleInput({ onAddRule }) {
           <div style={styles.errorTitle}>Parsing Issue</div>
           <div>{errorMsg}</div>
           <div style={{ marginTop: '0.5rem', display: 'flex', justifyContent: 'flex-end' }}>
-            <button onClick={handleDiscard} style={{ ...styles.btnSec, padding: '2px 10px', fontSize: '10px' }}>
+            <button onClick={handleDiscard} style={{ ...styles.btnSec, padding: '2px 10px', fontSize: '10px' }} className="btn-sec-hover">
               Dismiss
             </button>
           </div>

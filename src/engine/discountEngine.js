@@ -135,19 +135,19 @@ export function applyDiscounts(item, rules) {
 
   if (winner) {
     winnerSaving = calculateDiscountAmount(price, winner)
-    price -= winnerSaving
+    price = Math.max(0, price - winnerSaving)
     appliedRules.push(winner.ruleId)
   }
 
   const appliedStackables = []
   for (const rule of stackable) {
     const stackableSaving = calculateDiscountAmount(price, rule)
-    price -= stackableSaving
+    price = Math.max(0, price - stackableSaving)
     appliedRules.push(rule.ruleId)
     appliedStackables.push({ rule, saving: stackableSaving })
   }
 
-  const finalPrice = Math.round(price)
+  const finalPrice = Math.max(0, Math.round(price))
 
   // Construct detailed reasoning and status
   let status = 'Discount applied'
@@ -195,7 +195,7 @@ export function applyDiscounts(item, rules) {
     platform: item.platform,
     basePrice: item.basePrice,
     finalPrice,
-    totalDiscount: item.basePrice - finalPrice,
+    totalDiscount: Math.max(0, item.basePrice - finalPrice),
     appliedRules,
     skippedRules: skipped.map((r) => r.ruleId),
     reasoning,
