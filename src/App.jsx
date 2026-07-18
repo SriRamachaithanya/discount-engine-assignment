@@ -2,22 +2,24 @@
  * App.jsx
  *
  * Top-level component. Manages state for rules, cart items, and results.
- * Wires together CSV upload → parse → engine → display.
+ * Wires together CSV upload / Natural Language rule creation → parse → engine → display.
  */
 
-import { useState } from 'react'
-import CsvUploader from './components/CsvUploader.jsx'
-import DataTable from './components/DataTable.jsx'
-import ErrorBanner from './components/ErrorBanner.jsx'
-import { parseRulesCSV, parseCartCSV } from './engine/csvParser.js'
-import { processCart, cartTotal } from './engine/discountEngine.js'
+import { useState } from 'react';
+import CsvUploader from './components/CsvUploader.jsx';
+import DataTable from './components/DataTable.jsx';
+import ErrorBanner from './components/ErrorBanner.jsx';
+import NlRuleInput from './components/NlRuleInput.jsx';
+import { parseRulesCSV, parseCartCSV } from './engine/csvParser.js';
+import { processCart } from './engine/discountEngine.js';
+import { parseCartPdf } from './engine/pdfParser.js';
 
 // ── Column definitions ───────────────────────────────────────────
 
 const RULES_COLUMNS = [
   { key: 'ruleId',    label: 'Rule ID' },
   { key: 'scope',     label: 'Scope',      render: (v) => v.charAt(0).toUpperCase() + v.slice(1) },
-  { key: 'appliesTo', label: 'Applies To' },
+  { key: 'appliesTo', label: 'Applies To', render: (v, row) => row.scope === 'cart' ? '—' : v },
   { key: 'type',      label: 'Type',       render: (v) => v.charAt(0).toUpperCase() + v.slice(1) },
   {
     key: 'value',
@@ -25,7 +27,12 @@ const RULES_COLUMNS = [
     render: (v, row) => row.type === 'percentage' ? `${v}% off` : `Rs.${v} off`,
   },
   { key: 'stackable', label: 'Stackable',  render: (v) => (v ? 'Yes' : 'No') },
-]
+  {
+    key: 'minCartValue',
+    label: 'Min Cart Value',
+    render: (v, row) => row.scope === 'cart' ? `Rs.${v.toLocaleString('en-IN')}` : '—'
+  }
+];
 
 const CART_COLUMNS = [
   { key: 'itemId',    label: 'Item' },
@@ -33,141 +40,372 @@ const CART_COLUMNS = [
   { key: 'brand',     label: 'Brand' },
   { key: 'platform',  label: 'Platform' },
   { key: 'basePrice', label: 'Base Price', render: (v) => `Rs.${v.toLocaleString('en-IN')}` },
-]
+];
 
 const RESULTS_COLUMNS = [
   { key: 'itemId',    label: 'Item' },
   { key: 'product',   label: 'Product' },
   { key: 'basePrice', label: 'Base Price',  render: (v) => `Rs.${v.toLocaleString('en-IN')}` },
+  { key: 'reasoning', label: 'Rule(s) Applied',
+    render: (v) => (
+      <span style={{ color: v === 'No rules match' ? '#8e95a5' : '#fff', fontStyle: v === 'No rules match' ? 'italic' : 'normal', fontSize: 11.5 }}>
+        {v}
+      </span>
+    ),
+  },
   { key: 'finalPrice',label: 'Final Price',
     render: (v, row) => (
-      <span style={{ fontWeight: 700, color: row.totalDiscount > 0 ? '#1e5c2c' : '#131A48' }}>
+      <span style={{ fontWeight: 700, color: row.totalDiscount > 0 ? '#00e676' : '#fff' }}>
         Rs.{v.toLocaleString('en-IN')}
       </span>
     ),
   },
   {
-    key: 'totalDiscount',
-    label: 'You Save',
-    render: (v) =>
-      v > 0 ? (
-        <span style={{ color: '#1e5c2c', fontWeight: 600 }}>Rs.{v.toLocaleString('en-IN')}</span>
-      ) : (
-        <span style={{ color: '#888' }}>—</span>
-      ),
+    key: 'status',
+    label: 'Status',
+    render: (v) => {
+      let bg = 'rgba(255,255,255,0.05)';
+      let color = '#fff';
+      if (v === 'Max discount' || v === 'Discount applied') {
+        bg = 'rgba(0, 230, 118, 0.1)';
+        color = '#00e676';
+      } else if (v === 'Stacked') {
+        bg = 'rgba(61, 90, 255, 0.15)';
+        color = '#8c9eff';
+      } else if (v === 'No offer') {
+        bg = 'rgba(255, 82, 82, 0.1)';
+        color = '#ff5252';
+      }
+      return (
+        <span
+          style={{
+            display: 'inline-block',
+            fontSize: 9,
+            fontWeight: 800,
+            padding: '2px 8px',
+            borderRadius: 4,
+            background: bg,
+            color,
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+          }}
+        >
+          {v}
+        </span>
+      );
+    },
   },
-  {
-    key: 'reasoning',
-    label: 'Offer Applied',
-    render: (v) => (
-      <span style={{ color: v === 'No offers available' ? '#888' : '#131A48', fontStyle: v === 'No offers available' ? 'italic' : 'normal' }}>
-        {v}
-      </span>
-    ),
-  },
-]
+];
 
 // ── Styles ───────────────────────────────────────────────────────
 
 const S = {
-  page:    { minHeight: '100vh', background: '#f7f7f9', fontFamily: 'Arial, sans-serif' },
-  header:  { background: '#131A48', padding: '0.85rem 2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
-  logoTxt: { fontFamily: 'Georgia, serif', fontSize: 17, fontWeight: 700, color: '#fff', letterSpacing: '-0.02em' },
-  logoSpan:{ color: '#FF5800' },
-  headerSub: { fontSize: 11, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.07em' },
-  main:    { maxWidth: 960, margin: '0 auto', padding: '1.8rem 1.5rem' },
-  section: { background: '#fff', border: '1px solid #CECECE', borderRadius: 6, padding: '1.2rem 1.4rem', marginBottom: '1.2rem' },
-  sectionTitle: { fontFamily: 'Georgia, serif', fontWeight: 700, fontSize: 14, color: '#131A48', marginBottom: '0.7rem', paddingBottom: 6, borderBottom: '2px solid #FF5800', display: 'inline-block' },
-  grid2:   { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' },
-  btn:     {
-    background: '#FF5800', color: '#fff', border: 'none', borderRadius: 4,
-    padding: '0.65rem 2rem', fontSize: 13, fontWeight: 700, cursor: 'pointer',
-    letterSpacing: '0.04em', textTransform: 'uppercase',
+  page: {
+    minHeight: '100vh',
+    color: '#fff',
+    fontFamily: 'var(--font-body)',
+  },
+  header: {
+    background: 'rgba(10, 11, 16, 0.8)',
+    backdropFilter: 'blur(10px)',
+    borderBottom: '1px solid var(--border-glass)',
+    padding: '1rem 2.5rem',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    position: 'sticky',
+    top: 0,
+    zIndex: 100,
+  },
+  logoTxt: {
+    fontFamily: 'var(--font-heading)',
+    fontSize: '20px',
+    fontWeight: '800',
+    color: '#fff',
+    letterSpacing: '-0.02em',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px',
+  },
+  logoSpan: {
+    color: 'var(--color-primary)',
+    textShadow: '0 0 15px var(--color-primary-glow)',
+  },
+  headerSub: {
+    fontSize: '10px',
+    color: 'var(--text-sub)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.1rem',
+    fontWeight: '600',
+  },
+  main: {
+    maxWidth: '1100px',
+    margin: '0 auto',
+    padding: '2rem 1.5rem',
+  },
+  section: {
+    background: 'var(--bg-card)',
+    backdropFilter: 'blur(16px)',
+    border: '1px solid var(--border-glass)',
+    borderRadius: '12px',
+    padding: '1.4rem',
+    marginBottom: '1.5rem',
+    boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.2)',
+    transition: 'all 0.3s ease',
+  },
+  sectionTitle: {
+    fontFamily: 'var(--font-heading)',
+    fontWeight: '700',
+    fontSize: '15px',
+    color: '#fff',
+    marginBottom: '1rem',
+    paddingBottom: '4px',
+    borderBottom: '2px solid var(--color-primary)',
+    display: 'inline-block',
+    letterSpacing: '0.02em',
+  },
+  grid2: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '1.25rem',
+    alignItems: 'start',
+  },
+  btn: {
+    background: 'linear-gradient(135deg, var(--color-primary) 0%, #ff7a00 100%)',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '8px',
+    padding: '0.8rem 2.5rem',
+    fontSize: '12px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    letterSpacing: '0.05em',
+    textTransform: 'uppercase',
+    boxShadow: '0 4px 15px var(--color-primary-glow)',
+    transition: 'transform 0.1s, box-shadow 0.2s',
   },
   btnDisabled: {
-    background: '#CECECE', color: '#fff', border: 'none', borderRadius: 4,
-    padding: '0.65rem 2rem', fontSize: 13, fontWeight: 700, cursor: 'not-allowed',
-    letterSpacing: '0.04em', textTransform: 'uppercase',
+    background: 'rgba(255, 255, 255, 0.04)',
+    color: 'rgba(255, 255, 255, 0.15)',
+    border: '1px solid rgba(255, 255, 255, 0.04)',
+    borderRadius: '8px',
+    padding: '0.8rem 2.5rem',
+    fontSize: '12px',
+    fontWeight: '700',
+    cursor: 'not-allowed',
+    letterSpacing: '0.05em',
+    textTransform: 'uppercase',
   },
-  totalRow: {
-    display: 'flex', justifyContent: 'flex-end', alignItems: 'center',
-    gap: '1rem', marginTop: '0.75rem', paddingTop: '0.75rem',
-    borderTop: '2px solid #131A48',
+  summaryContainer: {
+    marginTop: '1.5rem',
+    paddingTop: '1rem',
+    borderTop: '1px solid var(--border-glass)',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.8rem',
   },
-  totalLabel: { fontWeight: 700, fontSize: 14, color: '#131A48' },
-  totalValue: { fontWeight: 700, fontSize: 16, color: '#131A48' },
-  tag: (color, bg) => ({
-    display: 'inline-block', fontSize: 10, fontWeight: 700, padding: '1px 6px',
-    borderRadius: 20, background: bg, color, textTransform: 'uppercase', letterSpacing: '0.04em',
+  summaryRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    fontSize: '13px',
+    color: 'var(--text-sub)',
+  },
+  summaryValue: {
+    fontWeight: '600',
+    color: '#fff',
+  },
+  cartOfferLabel: {
+    fontSize: '13px',
+    color: 'var(--color-success)',
+    fontWeight: '600',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+  },
+  cartOfferReasoning: {
+    fontSize: '11px',
+    color: 'var(--text-sub)',
+    fontStyle: 'italic',
+    fontWeight: 'normal',
+  },
+  cartOfferValue: {
+    fontWeight: '700',
+    color: 'var(--color-success)',
+  },
+  finalTotalRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: '0.75rem',
+    paddingTop: '1.25rem',
+    borderTop: '2px solid rgba(255,255,255,0.1)',
+  },
+  finalTotalLabel: {
+    fontWeight: '800',
+    fontSize: '15px',
+    color: '#fff',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+  },
+  finalTotalValue: {
+    fontWeight: '800',
+    fontSize: '22px',
+    color: 'var(--color-primary)',
+    textShadow: '0 0 20px var(--color-primary-glow)',
+  },
+  tabHeader: {
+    display: 'flex',
+    gap: '4px',
+    marginBottom: '1rem',
+    background: 'rgba(0,0,0,0.25)',
+    padding: '4px',
+    borderRadius: '8px',
+    border: '1px solid var(--border-glass)',
+  },
+  tabBtn: (active) => ({
+    flex: 1,
+    padding: '6px 12px',
+    fontSize: '10px',
+    fontWeight: '700',
+    color: active ? '#fff' : 'var(--text-sub)',
+    background: active ? 'rgba(255,255,255,0.06)' : 'transparent',
+    border: 'none',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+    transition: 'all 0.2s',
   }),
-}
+  pdfDropzone: {
+    border: '2px dashed rgba(255, 255, 255, 0.15)',
+    borderRadius: '8px',
+    padding: '1.5rem 1.2rem',
+    textAlign: 'center',
+    cursor: 'pointer',
+    background: 'rgba(0, 0, 0, 0.15)',
+    transition: 'all 0.2s',
+  },
+};
 
 // ── Component ────────────────────────────────────────────────────
 
 export default function App() {
-  const [rules, setRules]           = useState([])
-  const [rulesErrors, setRulesErr]  = useState([])
-  const [rulesFileName, setRulesFileName] = useState('')
+  const [rules, setRules]           = useState([]);
+  const [rulesErrors, setRulesErr]  = useState([]);
+  const [rulesFileName, setRulesFileName] = useState('');
 
-  const [cartItems, setCartItems]   = useState([])
-  const [cartErrors, setCartErrors] = useState([])
-  const [cartFileName, setCartFileName]   = useState('')
+  const [cartItems, setCartItems]   = useState([]);
+  const [cartErrors, setCartErrors] = useState([]);
+  const [cartFileName, setCartFileName]   = useState('');
+  const [cartInputType, setCartInputType] = useState('csv'); // 'csv' | 'pdf'
 
-  const [results, setResults]       = useState(null)
+  const [results, setResults]       = useState(null);
+  const [isPdfParsing, setIsPdfParsing] = useState(false);
 
   // ── Handlers ──
 
   function handleRulesLoad(csvText, fileName) {
-    const { data, errors } = parseRulesCSV(csvText)
-    setRules(data)
-    setRulesErr(errors)
-    setRulesFileName(fileName)
-    setResults(null) // clear stale results
+    const { data, errors } = parseRulesCSV(csvText);
+    setRules(data);
+    setRulesErr(errors);
+    setRulesFileName(fileName);
+    setResults(null); // clear stale results
   }
 
   function handleCartLoad(csvText, fileName) {
-    const { data, errors } = parseCartCSV(csvText)
-    setCartItems(data)
-    setCartErrors(errors)
-    setCartFileName(fileName)
-    setResults(null)
+    const { data, errors } = parseCartCSV(csvText);
+    setCartItems(data);
+    setCartErrors(errors);
+    setCartFileName(fileName);
+    setResults(null);
+  }
+
+  async function handlePdfUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setCartFileName(file.name);
+    setCartErrors([]);
+    setCartItems([]);
+    setResults(null);
+    setIsPdfParsing(true);
+
+    try {
+      const { data, errors } = await parseCartPdf(file);
+      setCartItems(data);
+      setCartErrors(errors);
+    } catch (err) {
+      console.error(err);
+      setCartErrors([err.message || 'An error occurred while parsing the PDF cart.']);
+    } finally {
+      setIsPdfParsing(false);
+    }
+  }
+
+  function handleAddNlRule(newRule) {
+    let nextNum = 1;
+    rules.forEach((r) => {
+      const match = r.ruleId.match(/RULE-(\d+)/i);
+      if (match) {
+        const val = parseInt(match[1], 10);
+        if (val >= nextNum) {
+          nextNum = val + 1;
+        }
+      }
+    });
+
+    const ruleId = `RULE-${String(nextNum).padStart(2, '0')}`;
+    const finalizedRule = {
+      ...newRule,
+      ruleId,
+    };
+
+    setRules((prevRules) => [...prevRules, finalizedRule]);
+    setResults(null);
   }
 
   function handleCalculate() {
-    const res = processCart(cartItems, rules)
-    setResults(res)
+    const res = processCart(cartItems, rules);
+    setResults(res);
   }
 
-  const canCalculate = rules.length > 0 && cartItems.length > 0
-
-  // ── Render ──
+  const canCalculate = rules.length > 0 && cartItems.length > 0;
 
   return (
     <div style={S.page}>
       {/* Header */}
       <div style={S.header}>
         <div style={S.logoTxt}>O<span style={S.logoSpan}>pp</span>tra</div>
-        <div style={S.headerSub}>Discount Engine</div>
+        <div style={S.headerSub}>Discount Engine Dashboard</div>
       </div>
 
       <div style={S.main}>
-
         {/* Upload row */}
         <div style={S.grid2}>
-          {/* Rules upload */}
+          {/* Rules Section */}
           <div style={S.section}>
             <div style={S.sectionTitle}>Discount Rules</div>
-            <CsvUploader
-              label="rules.csv"
-              description="Upload your discount rules CSV"
-              onLoad={handleRulesLoad}
-              hasData={rules.length > 0}
-              fileName={rulesFileName}
-            />
+            
+            {/* Direct CSV Upload */}
+            <div style={{ marginBottom: '1.25rem' }}>
+              <CsvUploader
+                label="Upload rules.csv"
+                description="Upload standard CSV table for bulk rules"
+                onLoad={handleRulesLoad}
+                hasData={rules.length > 0 && !!rulesFileName}
+                fileName={rulesFileName}
+              />
+            </div>
+
+            {/* Natural Language Rules */}
+            <NlRuleInput onAddRule={handleAddNlRule} />
+
             <ErrorBanner errors={rulesErrors} />
+            
             {rules.length > 0 && (
-              <div style={{ marginTop: '0.75rem' }}>
-                <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>
+              <div style={{ marginTop: '1.25rem' }}>
+                <div style={{ fontSize: 11, color: 'var(--text-sub)', marginBottom: 6, fontWeight: '500' }}>
                   {rules.length} rule{rules.length > 1 ? 's' : ''} loaded
                 </div>
                 <DataTable columns={RULES_COLUMNS} rows={rules} />
@@ -175,20 +413,81 @@ export default function App() {
             )}
           </div>
 
-          {/* Cart upload */}
+          {/* Cart Items Section */}
           <div style={S.section}>
             <div style={S.sectionTitle}>Cart Items</div>
-            <CsvUploader
-              label="cart.csv"
-              description="Upload your cart CSV"
-              onLoad={handleCartLoad}
-              hasData={cartItems.length > 0}
-              fileName={cartFileName}
-            />
+            
+            {/* Input Selection Tab */}
+            <div style={S.tabHeader}>
+              <button
+                style={S.tabBtn(cartInputType === 'csv')}
+                onClick={() => {
+                  setCartInputType('csv');
+                  setCartItems([]);
+                  setCartFileName('');
+                  setCartErrors([]);
+                  setResults(null);
+                }}
+              >
+                CSV Upload
+              </button>
+              <button
+                style={S.tabBtn(cartInputType === 'pdf')}
+                onClick={() => {
+                  setCartInputType('pdf');
+                  setCartItems([]);
+                  setCartFileName('');
+                  setCartErrors([]);
+                  setResults(null);
+                }}
+              >
+                PDF Cart Invoice
+              </button>
+            </div>
+
+            {/* Render CSV Uploader */}
+            {cartInputType === 'csv' ? (
+              <CsvUploader
+                label="cart.csv"
+                description="Upload standard shopping cart CSV"
+                onLoad={handleCartLoad}
+                hasData={cartItems.length > 0 && cartInputType === 'csv'}
+                fileName={cartFileName}
+              />
+            ) : (
+              /* Render PDF Uploader */
+              <div
+                style={{
+                  ...S.pdfDropzone,
+                  borderColor: cartItems.length > 0 ? 'rgba(0, 230, 118, 0.4)' : 'rgba(255, 255, 255, 0.15)',
+                  background: cartItems.length > 0 ? 'rgba(0, 230, 118, 0.05)' : 'rgba(0, 0, 0, 0.15)',
+                }}
+                onClick={() => document.getElementById('pdf-file-input').click()}
+              >
+                <input
+                  id="pdf-file-input"
+                  type="file"
+                  accept=".pdf"
+                  style={{ display: 'none' }}
+                  onChange={handlePdfUpload}
+                />
+                <span style={{ fontSize: 22, display: 'block', marginBottom: '4px' }}>
+                  {isPdfParsing ? '🌀' : cartItems.length > 0 ? '🟢' : '📕'}
+                </span>
+                <span style={{ fontWeight: 700, fontSize: 13, display: 'block', color: '#fff' }}>
+                  {isPdfParsing ? 'Analyzing Document...' : cartItems.length > 0 ? cartFileName : 'Upload Cart PDF'}
+                </span>
+                <span style={{ fontSize: 11, color: 'rgba(255, 255, 255, 0.5)', marginTop: '4px', display: 'block' }}>
+                  {cartItems.length > 0 ? 'Click to change document' : 'Upload invoice containing shopping table'}
+                </span>
+              </div>
+            )}
+
             <ErrorBanner errors={cartErrors} />
+            
             {cartItems.length > 0 && (
-              <div style={{ marginTop: '0.75rem' }}>
-                <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>
+              <div style={{ marginTop: '1.25rem' }}>
+                <div style={{ fontSize: 11, color: 'var(--text-sub)', marginBottom: 6, fontWeight: '500' }}>
                   {cartItems.length} item{cartItems.length > 1 ? 's' : ''} loaded
                 </div>
                 <DataTable columns={CART_COLUMNS} rows={cartItems} />
@@ -198,7 +497,7 @@ export default function App() {
         </div>
 
         {/* Calculate button */}
-        <div style={{ textAlign: 'center', marginBottom: '1.2rem' }}>
+        <div style={{ textAlign: 'center', margin: '2rem 0' }}>
           <button
             style={canCalculate ? S.btn : S.btnDisabled}
             onClick={handleCalculate}
@@ -207,25 +506,40 @@ export default function App() {
             Calculate Discounts
           </button>
           {!canCalculate && (
-            <div style={{ fontSize: 11, color: '#888', marginTop: 6 }}>
-              Upload both files to calculate
+            <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 8 }}>
+              Please load both discount rules and cart items to calculate.
             </div>
           )}
         </div>
 
         {/* Results */}
         {results && (
-          <div style={S.section}>
-            <div style={S.sectionTitle}>Cart Summary</div>
-            <DataTable columns={RESULTS_COLUMNS} rows={results} />
-            <div style={S.totalRow}>
-              <span style={S.totalLabel}>Cart Total</span>
-              <span style={S.totalValue}>Rs.{cartTotal(results).toLocaleString('en-IN')}</span>
+          <div style={{ ...S.section, borderLeft: '3px solid var(--color-primary)' }}>
+            <div style={S.sectionTitle}>Calculated Cart Summary</div>
+            <DataTable columns={RESULTS_COLUMNS} rows={results.itemResults} />
+            
+            <div style={S.summaryContainer}>
+              <div style={S.summaryRow}>
+                <span>Cart Subtotal (after item-level offers)</span>
+                <span style={S.summaryValue}>Rs.{results.cartTotalBeforeOffer.toLocaleString('en-IN')}</span>
+              </div>
+              {results.appliedCartRule && (
+                <div style={S.summaryRow}>
+                  <span style={S.cartOfferLabel}>
+                    🏷️ Cart Offer — {results.appliedCartRule.ruleId}
+                    <span style={S.cartOfferReasoning}>({results.appliedCartRule.reasoning})</span>
+                  </span>
+                  <span style={S.cartOfferValue}>−Rs.{results.appliedCartRule.discountAmount.toLocaleString('en-IN')}</span>
+                </div>
+              )}
+              <div style={S.finalTotalRow}>
+                <span style={S.finalTotalLabel}>Final Cart Total</span>
+                <span style={S.finalTotalValue}>Rs.{results.finalCartTotal.toLocaleString('en-IN')}</span>
+              </div>
             </div>
           </div>
         )}
-
       </div>
     </div>
-  )
+  );
 }

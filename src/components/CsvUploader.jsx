@@ -5,30 +5,30 @@
  * Calls onLoad(rawText) when a file is selected.
  */
 
-import { useRef } from 'react'
+import { useRef } from 'react';
 
 export default function CsvUploader({ label, description, onLoad, hasData, fileName }) {
-  const inputRef = useRef(null)
+  const inputRef = useRef(null);
 
   function handleFile(e) {
-    const file = e.target.files[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = (evt) => onLoad(evt.target.result, file.name)
-    reader.readAsText(file)
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => onLoad(evt.target.result, file.name);
+    reader.readAsText(file);
     // Reset input so the same file can be re-uploaded
-    e.target.value = ''
+    e.target.value = '';
   }
 
   return (
     <div
       style={{
-        border: `2px dashed ${hasData ? '#1e5c2c' : '#CECECE'}`,
-        borderRadius: 6,
-        padding: '1rem 1.2rem',
-        background: hasData ? '#f0faf2' : '#fafafa',
+        border: `2px dashed ${hasData ? 'rgba(0, 230, 118, 0.4)' : 'rgba(255, 255, 255, 0.15)'}`,
+        borderRadius: '8px',
+        padding: '1.1rem 1.3rem',
+        background: hasData ? 'rgba(0, 230, 118, 0.05)' : 'rgba(0, 0, 0, 0.15)',
         cursor: 'pointer',
-        transition: 'border-color 0.15s',
+        transition: 'all 0.2s',
       }}
       onClick={() => inputRef.current?.click()}
     >
@@ -39,20 +39,20 @@ export default function CsvUploader({ label, description, onLoad, hasData, fileN
         style={{ display: 'none' }}
         onChange={handleFile}
       />
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-        <span style={{ fontSize: 20 }}>{hasData ? '✅' : '📄'}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        <span style={{ fontSize: 20 }}>{hasData ? '🟢' : '📄'}</span>
         <div>
-          <div style={{ fontWeight: 700, fontSize: 13, color: '#131A48' }}>{label}</div>
-          <div style={{ fontSize: 11, color: '#888', marginTop: 2 }}>
+          <div style={{ fontWeight: 700, fontSize: 13, color: '#fff' }}>{label}</div>
+          <div style={{ fontSize: 11, color: 'rgba(255, 255, 255, 0.5)', marginTop: 2 }}>
             {hasData ? fileName : description}
           </div>
         </div>
         <div style={{ marginLeft: 'auto' }}>
           <span
             style={{
-              fontSize: 11,
+              fontSize: 10,
               fontWeight: 700,
-              color: hasData ? '#1e5c2c' : '#FF5800',
+              color: hasData ? '#00e676' : '#ff5500',
               textTransform: 'uppercase',
               letterSpacing: '0.05em',
             }}
@@ -62,5 +62,5 @@ export default function CsvUploader({ label, description, onLoad, hasData, fileN
         </div>
       </div>
     </div>
-  )
+  );
 }
